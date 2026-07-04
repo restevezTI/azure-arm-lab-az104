@@ -1,183 +1,158 @@
-Automatización de discos administrados usando plantillas ARM exportadas del portal
+Laboratorio ARM – Creación y Replicación de Discos en Azure usando ARM Templates + Azure CLI
+Este laboratorio muestra cómo crear discos administrados en Azure utilizando ARM Templates y desplegarlos exclusivamente con Azure CLI. El flujo consiste en:
 
-Este laboratorio muestra cómo crear un disco administrado en Azure, exportar su plantilla ARM, entender su estructura y reutilizarla para desplegar nuevos discos modificando parámetros como el tamaño, SKU o nombre. Es un ejercicio fundamental para dominar Infraestructura como Código (IaC) en el AZ-104.
+Crear un disco manualmente en Azure Portal.
 
-📌 Objetivos del laboratorio
-Crear un Managed Disk desde el portal de Azure.
+Exportar su plantilla ARM (Plantilla_disco.json).
 
-Exportar la ARM Template generada automáticamente.
+Modificar esa plantilla para generar nuevos discos (LAB01.json).
 
-Analizar la estructura de la plantilla.
+Ajustar parámetros como nombre, tamaño, SKU, zona, etc.
 
-Crear nuevos discos reutilizando la plantilla.
+Desplegar la plantilla con Azure CLI.
 
-Modificar parámetros clave:
+Verificar el SKU y propiedades del disco creado.
 
-Tamaño (GB)
+📁 Archivos del laboratorio
+1. Plantilla_disco.json
+Plantilla ARM exportada desde Azure Portal.
+Contiene un disco de 32 GB, SKU Premium_LRS, tier P4, zona 1.
 
-SKU (StandardSSD, PremiumSSD, etc.)
+Fragmento real del archivo:
+
+"diskSizeGB": 32  
+"sku": { "name": "Premium_LRS", "tier": "Premium" }
+
+2. LAB01.json
+Plantilla ARM creada a partir de la anterior.
+Contiene un disco de 16 GB, mismo SKU y tier, con parámetro renombrado.
+
+Fragmento real del archivo:
+
+"diskSizeGB": 16  
+"name": "[parameters('disks_name')]"
+
+🎯 Objetivo del laboratorio
+Comprender cómo Azure genera una plantilla ARM al exportar un disco.
+
+Modificar esa plantilla para crear nuevos discos.
+
+Ajustar parámetros clave:
 
 Nombre del disco
 
-Validar el SKU y propiedades del disco creado.
+Tamaño (GB)
 
-🧰 Prerrequisitos
-Suscripción activa de Azure.
+SKU
 
-Visual Studio Code o editor de texto.
+Zona
 
-Azure CLI o Cloud Shell.
+Tier
 
-Conocimientos básicos de ARM Templates.
+Desplegar la plantilla solo con Azure CLI.
 
-🏗️ 1. Crear el Resource Group
-Portal de Azure
-Accede a https://portal.azure.com.
+Validar el SKU del disco creado.
 
-Ve a Resource groups → Create.
+🧩 Estructura de la plantilla ARM
+Ambas plantillas comparten la misma estructura:
 
-Configura:
-
-Name: MILABARM01
-
-Region: West Europe
-
-Pulsa Review + Create → Create
-
-💽 2. Crear un disco administrado (disco base)
-Este disco será el que exportaremos como plantilla.
-
-Portal de Azure
-Create a resource → busca Managed Disk.
-
-Configura:
-
-Resource group: MILABARM
-
-Disk name: disk-base-01
-
-Region: West Europe
-
-Source type: None (disco vacío)
-
-Size: 32 GiB
-
-SKU: StandardSSD_LRS
-
-Pulsa Review + Create → Create
-
-📤 3. Exportar la plantilla ARM del disco
-Ve a Resource groups → MILABARM01.
-
-Selecciona el disco disk-base-01.
-
-En el menú izquierdo, pulsa Automation\Export template.
-
-Descarga:
-
-azuredeploy.json
-
-azuredeploy.parameters.json (si aparece)
-
-Esta plantilla describe exactamente cómo Azure creó el disco.
-
-🧩 4. Entender la plantilla ARM del disco
-La plantilla suele incluir:
-
-4.1 Parámetros
+Parámetros
 json
 "parameters": {
-  "diskName": {
-    "type": "string"
-  },
-  "diskSizeGB": {
-    "type": "int",
-    "defaultValue": 32
-  },
-  "skuName": {
-    "type": "string",
-    "defaultValue": "StandardSSD_LRS"
-  },
-  "location": {
-    "type": "string",
-    "defaultValue": "[resourceGroup().location]"
-  }
-}
-4.2 Recurso del disco
-json
-"resources": [
-  {
-    "type": "Microsoft.Compute/disks",
-    "apiVersion": "2023-01-02",
-    "name": "[parameters('diskName')]",
-    "location": "[parameters('location')]",
-    "sku": {
-      "name": "[parameters('skuName')]"
-    },
-    "properties": {
-      "creationData": {
-        "createOption": "Empty"
-      },
-      "diskSizeGB": "[parameters('diskSizeGB')]"
+    "disks_name": {
+        "defaultValue": "MILAB01ARM",
+        "type": "String"
     }
-  }
-]
-📝 5. Crear archivo de parámetros para nuevos discos
-Ejemplo de azuredeploy.parameters.json:
+}
+Recurso del disco
+json
+"type": "Microsoft.Compute/disks",
+"apiVersion": "2025-01-02",
+"location": "westeurope",
+"sku": {
+    "name": "Premium_LRS",
+    "tier": "Premium"
+},
+"zones": ["1"],
+"properties": {
+    "creationData": { "createOption": "Empty" },
+    "diskSizeGB": 16 | 32,
+    "diskIOPSReadWrite": 120,
+    "diskMBpsReadWrite": 25,
+    "encryption": { "type": "EncryptionAtRestWithPlatformKey" },
+    "tier": "P4"
+}
+📝 Archivo de parámetros para Azure CLI
+Ejemplo de params.json:
 
 json
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
   "parameters": {
-    "diskName": {
-      "value": "disk-new-01"
-    },
-    "diskSizeGB": {
-      "value": 64
-    },
-    "skuName": {
-      "value": "PremiumSSD_LRS"
-    },
-    "location": {
-      "value": "westeurope"
+    "disks_name": {
+      "value": "DISK-NUEVO-CLI"
     }
   }
 }
-Con este archivo puedes crear discos con diferentes tamaños, nombres y SKUs sin tocar la plantilla. Se pueden anadir parametros mas avanzados en el AZURE ARM TEMPLATE, buscando el recurso especifico a tratar con su correspondiente proveedor, EJ. "Microsoft.Compute/disks"
+Si quieres cambiar el tamaño del disco, edítalo directamente en la plantilla:
 
-🚀 6. Desplegar nuevos discos usando la plantilla ARM
-6.1 Azure CLI
+json
+"diskSizeGB": 64
+Si quieres cambiar el SKU:
+
+json
+"sku": {
+  "name": "StandardSSD_LRS",
+  "tier": "Standard"
+}
+🚀 Despliegue con Azure CLI
+1. Crear el Resource Group
+bash
+az group create \
+  --name rg-arm-disk \
+  --location westeurope
+2. Desplegar la plantilla ARM
+Usando la plantilla modificada (LAB01.json):
+
 bash
 az deployment group create \
-  --resource-group rg-disk-arm \
-  --template-file azuredeploy.json \
-  --parameters @azuredeploy.parameters.json
+  --resource-group rg-arm-disk \
+  --template-file LAB01.json \
+  --parameters @params.json
+Si quieres desplegar la plantilla original:
+
+bash
+az deployment group create \
+  --resource-group rg-arm-disk \
+  --template-file Plantilla_disco.json \
+  --parameters @params.json
+🔍 Verificar el SKU del disco creado
 Azure CLI
 bash
 az disk show \
-  --resource-group rg-disk-arm \
-  --name disk-new-01 \
+  --resource-group rg-arm-disk \
+  --name DISK-NUEVO-CLI \
   --query "sku"
-PowerShell
-powershell
-(Get-AzDisk -ResourceGroupName "rg-disk-arm" -DiskName "disk-new-01").Sku
-También puedes verificar:
+Ver propiedades completas:
 
 bash
-az disk show --resource-group rg-disk-arm --name disk-new-01
-🧹 8. Limpieza del laboratorio
-Azure CLI
+az disk show \
+  --resource-group rg-arm-disk \
+  --name DISK-NUEVO-CLI
+🧹 Eliminar el laboratorio
 bash
 az group delete \
-  --name rg-disk-arm \
+  --name rg-arm-disk \
   --yes --no-wait
-PowerShell
-powershell
-Remove-AzResourceGroup `
-  -Name "rg-disk-arm" `
-  -Force
-  
+📚 Conclusiones
+Exportar plantillas ARM es una forma excelente de aprender IaC.
+
+Las plantillas de discos son simples y fáciles de modificar.
+
+Azure CLI permite desplegar discos de forma repetible y automatizada.
+
+Cambiar tamaño, SKU o nombre es tan simple como editar un parámetro.
+
+ 
 📝 Autor
 Roberto — Ingeniero en Telecomunicaciones y Electrónica  
 Preparando AZ-104 y documentando laboratorios para la comunidad técnica.
