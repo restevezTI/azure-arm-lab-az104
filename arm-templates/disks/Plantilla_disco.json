@@ -1,0 +1,41 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "disks_MILAB01ARM_name": {
+            "defaultValue": "MILAB01ARM",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Compute/disks",
+            "apiVersion": "2025-01-02",
+            "name": "[parameters('disks_MILAB01ARM_name')]",
+            "location": "westeurope",
+            "sku": {
+                "name": "Premium_LRS",
+                "tier": "Premium"
+            },
+            "zones": [
+                "1"
+            ],
+            "properties": {
+                "creationData": {
+                    "createOption": "Empty"
+                },
+                "diskSizeGB": 32,
+                "diskIOPSReadWrite": 120,
+                "diskMBpsReadWrite": 25,
+                "encryption": {
+                    "type": "EncryptionAtRestWithPlatformKey"
+                },
+                "networkAccessPolicy": "AllowAll",
+                "publicNetworkAccess": "Enabled",
+                "dataAccessAuthMode": "None",
+                "tier": "P4"
+            }
+        }
+    ]
+}
